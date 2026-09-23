@@ -18,6 +18,10 @@ artifacts/
 # Logs
 logs/
 
+# Input / Output (local only, not tracked — any project under youtube.be)
+**/input/
+**/output/
+
 # Secrets / local config
 appsettings.*.local.json
 secrets.json

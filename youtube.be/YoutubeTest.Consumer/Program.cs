@@ -1,24 +1,31 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Serilog;
+using YoutubeTest.Consumer.Extensions;
 using YoutubeTest.Consumer.Models;
 using YoutubeTest.Consumer.Services;
+using YoutubeTest.Shared;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
     .WriteTo.File(
-        path: Path.Combine("logs", "youtubetest-.txt"),
+        path: Path.Combine(LogConstants.LogDirectory, LogConstants.LogFileName + ".txt"),
+        outputTemplate: LogConstants.OutputTemplate,
         rollingInterval: RollingInterval.Day,
         retainedFileCountLimit: 7)
     .CreateLogger();
 
 try
 {
-    var settings = SettingsLoader.Load();
+    var configuration = new ConfigurationBuilder()
+        .AddUserSecrets(typeof(Program).Assembly)
+        .Build();
 
     var services = new ServiceCollection();
 
-    services.AddSingleton(settings);
+    services.AddAppSettings(configuration);
 
     services.AddLogging(logging =>
     {
@@ -28,12 +35,13 @@ try
 
     services.AddHttpClient<YouTubeFetcher>((sp, client) =>
     {
-        var config = sp.GetRequiredService<AppSettings>();
-        client.BaseAddress = new Uri(config.YouTubeBaseUrl);
+        var settings = sp.GetRequiredService<IOptions<AppSettings>>().Value;
+        client.BaseAddress = new Uri(settings.YouTubeBaseUrl);
         client.Timeout = TimeSpan.FromSeconds(30);
         client.DefaultRequestHeaders.UserAgent.ParseAdd("YoutubeTest.Consumer/1.0");
     })
-    .AddHttpMessageHandler(sp => new YouTubeAuthHandler(sp.GetRequiredService<AppSettings>().Token))
+    .AddHttpMessageHandler(sp =>
+        new YouTubeAuthHandler(sp.GetRequiredService<IOptions<AppSettings>>().Value.Token))
     .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
     {
         PooledConnectionLifetime = TimeSpan.FromMinutes(5)
@@ -45,8 +53,7 @@ try
     await using var provider = services.BuildServiceProvider();
 
     var processor = provider.GetRequiredService<BatchProcessor>();
-
-    await processor.ProcessAsync(settings.InputPath, settings.OutputPath);
+    await processor.ProcessAsync();
 }
 catch (Exception ex)
 {

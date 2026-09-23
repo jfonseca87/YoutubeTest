@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using YoutubeTest.Consumer.Models;
 using YoutubeTest.Shared.Models;
 
@@ -9,14 +10,15 @@ public class BatchProcessor(
     YouTubeFetcher fetcher,
     JsonOutputWriter writer,
     ILogger<BatchProcessor> logger,
-    AppSettings settings)
+    IOptions<AppSettings> options)
 {
-    private readonly int _batchSize = settings.BatchSize > 0 ? settings.BatchSize : 50;
+    private readonly AppSettings _settings = options.Value;
+    private readonly int _batchSize = options.Value.BatchSize > 0 ? options.Value.BatchSize : 50;
 
-    public async Task ProcessAsync(string inputPath, string outputPath, CancellationToken cancellationToken = default)
+    public async Task ProcessAsync(CancellationToken cancellationToken = default)
     {
-        var videoIds = await LoadVideoIdsAsync(inputPath, cancellationToken);
-        logger.LogInformation("Input: {Count} video IDs from {Path}", videoIds.Count, inputPath);
+        var videoIds = await LoadVideoIdsAsync(_settings.InputPath, cancellationToken);
+        logger.LogInformation("Input: {Count} video IDs from {Path}", videoIds.Count, _settings.InputPath);
 
         var allVideos = new List<Video>();
         var batches = videoIds.Chunk(_batchSize).ToList();
@@ -38,7 +40,7 @@ public class BatchProcessor(
             }
         }
 
-        await writer.WriteAsync(outputPath, allVideos, cancellationToken);
+        await writer.WriteAsync(_settings.OutputPath, allVideos, cancellationToken);
         logger.LogInformation("Process completed: {Total} final videos", allVideos.Count);
     }
 
