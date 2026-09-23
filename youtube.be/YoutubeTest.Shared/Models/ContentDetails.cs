@@ -13,9 +13,11 @@ public class ContentDetails
     [JsonPropertyName("definition")]
     public string Definition { get; set; } = string.Empty;
 
+    [JsonConverter(typeof(FlexibleBoolConverter))]
     [JsonPropertyName("caption")]
     public bool Caption { get; set; }
 
+    [JsonConverter(typeof(FlexibleBoolConverter))]
     [JsonPropertyName("licensedContent")]
     public bool LicensedContent { get; set; }
 

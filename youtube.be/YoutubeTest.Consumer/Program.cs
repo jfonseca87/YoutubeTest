@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Serilog;
 using YoutubeTest.Consumer.Extensions;
+using YoutubeTest.Consumer.Handlers;
 using YoutubeTest.Consumer.Models;
 using YoutubeTest.Consumer.Services;
 using YoutubeTest.Shared;
@@ -15,6 +16,7 @@ Log.Logger = new LoggerConfiguration()
         outputTemplate: LogConstants.OutputTemplate,
         rollingInterval: RollingInterval.Day,
         retainedFileCountLimit: 7)
+    .WriteTo.Console(outputTemplate: LogConstants.OutputTemplate)
     .CreateLogger();
 
 try

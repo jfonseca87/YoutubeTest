@@ -16,6 +16,11 @@ public static class ServiceCollectionExtensions
                 "Secret 'InputPath' is not configured. Run: dotnet user-secrets set \"InputPath\" \"<input-json-path>\"")
             .Validate(s => !string.IsNullOrWhiteSpace(s.OutputPath),
                 "Secret 'OutputPath' is not configured. Run: dotnet user-secrets set \"OutputPath\" \"<output-json-path>\"")
+            .PostConfigure(s =>
+            {
+                s.InputPath = s.InputPath.ResolveProjectPath();
+                s.OutputPath = s.OutputPath.ResolveOutsideProjectPath();
+            })
             .ValidateOnStart();
 
         return services;

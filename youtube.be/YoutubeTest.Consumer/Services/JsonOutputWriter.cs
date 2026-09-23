@@ -14,13 +14,14 @@ public class JsonOutputWriter(ILogger<JsonOutputWriter> logger)
 
     public async Task WriteAsync(string outputPath, IReadOnlyList<Video> videos, CancellationToken cancellationToken = default)
     {
-        var directory = Path.GetDirectoryName(Path.GetFullPath(outputPath));
+        var fullPath = Path.GetFullPath(outputPath);
+        var directory = Path.GetDirectoryName(fullPath);
         if (!string.IsNullOrEmpty(directory))
             Directory.CreateDirectory(directory);
 
-        await using var stream = File.Create(outputPath);
+        await using var stream = File.Create(fullPath);
         await JsonSerializer.SerializeAsync(stream, videos, JsonOptions, cancellationToken);
 
-        logger.LogInformation("Output written: {Path} ({Count} videos)", outputPath, videos.Count);
+        logger.LogInformation("Output written: {Path} ({Count} videos)", fullPath, videos.Count);
     }
 }

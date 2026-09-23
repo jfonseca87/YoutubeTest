@@ -13,12 +13,15 @@ public class VideoStatus
     [JsonPropertyName("license")]
     public string License { get; set; } = string.Empty;
 
+    [JsonConverter(typeof(FlexibleBoolConverter))]
     [JsonPropertyName("embeddable")]
     public bool Embeddable { get; set; }
 
+    [JsonConverter(typeof(FlexibleBoolConverter))]
     [JsonPropertyName("publicStatsViewable")]
     public bool PublicStatsViewable { get; set; }
 
+    [JsonConverter(typeof(FlexibleBoolConverter))]
     [JsonPropertyName("madeForKids")]
     public bool MadeForKids { get; set; }
 }
