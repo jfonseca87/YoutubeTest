@@ -6,22 +6,49 @@ namespace YoutubeTest.Consumer.Services;
 
 public class JsonOutputWriter(ILogger<JsonOutputWriter> logger)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    private static readonly JsonWriterOptions WriterOptions = new()
     {
-        WriteIndented = true,
+        Indented = true
+    };
+
+    private static readonly JsonSerializerOptions SerializerOptions = new()
+    {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    public async Task WriteAsync(string outputPath, IReadOnlyList<Video> videos, CancellationToken cancellationToken = default)
+    public async Task<int> WriteBatchesAsync(
+        string outputPath,
+        IAsyncEnumerable<List<Video>> batches,
+        CancellationToken cancellationToken = default)
     {
         var fullPath = Path.GetFullPath(outputPath);
         var directory = Path.GetDirectoryName(fullPath);
         if (!string.IsNullOrEmpty(directory))
             Directory.CreateDirectory(directory);
 
-        await using var stream = File.Create(fullPath);
-        await JsonSerializer.SerializeAsync(stream, videos, JsonOptions, cancellationToken);
+        var totalVideos = 0;
 
-        logger.LogInformation("Output written: {Path} ({Count} videos)", fullPath, videos.Count);
+        await using var file = File.Create(fullPath);
+        await using var jsonWriter = new Utf8JsonWriter(file, WriterOptions);
+
+        jsonWriter.WriteStartArray();
+
+        await foreach (var videos in batches.WithCancellation(cancellationToken))
+        {
+            foreach (var video in videos)
+            {
+                JsonSerializer.Serialize(jsonWriter, video, SerializerOptions);
+                totalVideos++;
+            }
+
+            jsonWriter.Flush();
+        }
+
+        jsonWriter.WriteEndArray();
+        await jsonWriter.FlushAsync(cancellationToken);
+
+        logger.LogInformation("Output written: {Path} ({Count} videos)", fullPath, totalVideos);
+
+        return totalVideos;
     }
 }

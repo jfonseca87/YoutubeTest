@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -12,6 +13,11 @@ public class BatchProcessor(
     ILogger<BatchProcessor> logger,
     IOptions<AppSettings> options)
 {
+    private static readonly JsonSerializerOptions WriteOptions = new()
+    {
+        WriteIndented = true
+    };
+
     private readonly AppSettings _settings = options.Value;
     private readonly int _batchSize = options.Value.BatchSize > 0 ? options.Value.BatchSize : 50;
 
@@ -20,28 +26,78 @@ public class BatchProcessor(
         var videoIds = await LoadVideoIdsAsync(_settings.InputPath, cancellationToken);
         logger.LogInformation("Input: {Count} video IDs from {Path}", videoIds.Count, _settings.InputPath);
 
-        var allVideos = new List<Video>();
-        var batches = videoIds.Chunk(_batchSize).ToList();
-        logger.LogInformation("Processing {BatchCount} batches of up to {BatchSize}", batches.Count, _batchSize);
+        var batchCount = (videoIds.Count + _batchSize - 1) / _batchSize;
+        logger.LogInformation("Processing {BatchCount} batches of up to {BatchSize}", batchCount, _batchSize);
 
-        for (var i = 0; i < batches.Count; i++)
+        var missingIds = new HashSet<string>(StringComparer.Ordinal);
+        var batches = FetchBatchesAsync(videoIds, batchCount, missingIds, cancellationToken);
+        var totalVideos = await writer.WriteBatchesAsync(_settings.OutputPath, batches, cancellationToken);
+
+        await SaveMissingVideosAsync(missingIds, cancellationToken);
+
+        logger.LogInformation("Process completed: {Total} final videos", totalVideos);
+    }
+
+    private async IAsyncEnumerable<List<Video>> FetchBatchesAsync(
+        IReadOnlyList<string> videoIds,
+        int batchCount,
+        HashSet<string> missingIds,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var current = 0;
+
+        foreach (var batch in videoIds.Chunk(_batchSize))
         {
-            var batch = batches[i];
-            logger.LogInformation("Batch {Current}/{Total} ({Count} IDs)", i + 1, batches.Count, batch.Length);
+            current++;
+            cancellationToken.ThrowIfCancellationRequested();
+
+            logger.LogInformation("Batch {Current}/{Total} ({Count} IDs)", current, batchCount, batch.Length);
+
+            List<Video> videos;
 
             try
             {
-                var videos = await fetcher.FetchVideosAsync(batch, cancellationToken);
-                allVideos.AddRange(videos);
+                videos = await fetcher.FetchVideosAsync(batch, cancellationToken);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                logger.LogError(ex, "Batch {Current}/{Total} failed, continuing with the next one", i + 1, batches.Count);
+                logger.LogError(ex, "Batch {Current}/{Total} failed, continuing with the next one", current, batchCount);
+                missingIds.UnionWith(batch);
+                continue;
             }
-        }
 
-        await writer.WriteAsync(_settings.OutputPath, allVideos, cancellationToken);
-        logger.LogInformation("Process completed: {Total} final videos", allVideos.Count);
+            if (videos.Count < batch.Length)
+            {
+                var receivedIds = videos
+                    .Select(v => v.Id)
+                    .ToHashSet(StringComparer.Ordinal);
+
+                missingIds.UnionWith(batch.Where(id => !receivedIds.Contains(id)));
+            }
+
+            yield return videos;
+        }
+    }
+
+    private async Task SaveMissingVideosAsync(HashSet<string> missingIds, CancellationToken cancellationToken)
+    {
+        if (missingIds.Count == 0)
+            return;
+
+        var inputDirectory = Path.GetDirectoryName(_settings.InputPath);
+        if (string.IsNullOrEmpty(inputDirectory))
+            return;
+
+        Directory.CreateDirectory(inputDirectory);
+
+        var missingPath = Path.Combine(inputDirectory, "missing-videos.json");
+        await using var stream = File.Create(missingPath);
+        await JsonSerializer.SerializeAsync(stream, missingIds.ToList(), WriteOptions, cancellationToken);
+
+        logger.LogWarning(
+            "Missing videos: {MissingCount} IDs not returned. Saved to {Path}",
+            missingIds.Count,
+            missingPath);
     }
 
     private static async Task<List<string>> LoadVideoIdsAsync(string inputPath, CancellationToken cancellationToken)
@@ -56,18 +112,6 @@ public class BatchProcessor(
             foreach (var element in doc.RootElement.EnumerateArray())
                 AddId(ids, element);
         }
-        else if (doc.RootElement.ValueKind == JsonValueKind.Object)
-        {
-            if (doc.RootElement.TryGetProperty("items", out var items) && items.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var element in items.EnumerateArray())
-                    AddId(ids, element);
-            }
-            else
-            {
-                AddId(ids, doc.RootElement);
-            }
-        }
 
         return ids;
     }
@@ -78,33 +122,7 @@ public class BatchProcessor(
         {
             var id = element.GetString();
             if (!string.IsNullOrWhiteSpace(id))
-                ids.Add(id);
-        }
-        else if (element.ValueKind == JsonValueKind.Object)
-        {
-            if (element.TryGetProperty("videoId", out var videoId) && videoId.ValueKind == JsonValueKind.String)
-            {
-                var id = videoId.GetString();
-                if (!string.IsNullOrWhiteSpace(id))
-                    ids.Add(id);
-            }
-            else if (element.TryGetProperty("id", out var idProp))
-            {
-                if (idProp.ValueKind == JsonValueKind.String)
-                {
-                    var id = idProp.GetString();
-                    if (!string.IsNullOrWhiteSpace(id))
-                        ids.Add(id);
-                }
-                else if (idProp.ValueKind == JsonValueKind.Object &&
-                         idProp.TryGetProperty("videoId", out var nested) &&
-                         nested.ValueKind == JsonValueKind.String)
-                {
-                    var id = nested.GetString();
-                    if (!string.IsNullOrWhiteSpace(id))
-                        ids.Add(id);
-                }
-            }
+                ids.Add(id.Trim());
         }
     }
 }

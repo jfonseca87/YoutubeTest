@@ -1,24 +1,16 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using YoutubeTest.Consumer.Models;
 using YoutubeTest.Shared.Models;
 
 namespace YoutubeTest.Consumer.Services;
 
 public class YouTubeFetcher(
     HttpClient httpClient,
-    ILogger<YouTubeFetcher> logger,
-    IOptions<AppSettings> options)
+    ILogger<YouTubeFetcher> logger)
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
-    };
-
-    private static readonly JsonSerializerOptions WriteOptions = new()
-    {
-        WriteIndented = true
     };
 
     public async Task<List<Video>> FetchVideosAsync(IReadOnlyList<string> videoIds, CancellationToken cancellationToken = default)
@@ -54,44 +46,6 @@ public class YouTubeFetcher(
                 result?.PageInfo?.TotalResults ?? 0);
         }
 
-        await SaveMissingVideosAsync(videoIds, results, cancellationToken);
-
         return results;
-    }
-
-    private async Task SaveMissingVideosAsync(
-        IReadOnlyList<string> sentIds,
-        List<Video> receivedVideos,
-        CancellationToken cancellationToken)
-    {
-        if (receivedVideos.Count >= sentIds.Count)
-            return;
-
-        var receivedIds = receivedVideos
-            .Select(v => v.Id)
-            .ToHashSet(StringComparer.Ordinal);
-
-        var missingIds = sentIds
-            .Where(id => !receivedIds.Contains(id))
-            .ToList();
-
-        if (missingIds.Count == 0)
-            return;
-
-        var inputDirectory = Path.GetDirectoryName(options.Value.InputPath);
-        if (string.IsNullOrEmpty(inputDirectory))
-            return;
-
-        Directory.CreateDirectory(inputDirectory);
-
-        var missingPath = Path.Combine(inputDirectory, "missing-videos.json");
-        await using var stream = File.Create(missingPath);
-        await JsonSerializer.SerializeAsync(stream, missingIds, WriteOptions, cancellationToken);
-
-        logger.LogWarning(
-            "YouTube fetch: {MissingCount} of {SentCount} IDs not returned. Missing IDs saved to {Path}",
-            missingIds.Count,
-            sentIds.Count,
-            missingPath);
     }
 }

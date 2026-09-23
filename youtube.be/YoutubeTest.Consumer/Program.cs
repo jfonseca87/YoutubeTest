@@ -9,10 +9,12 @@ using YoutubeTest.Consumer.Models;
 using YoutubeTest.Consumer.Services;
 using YoutubeTest.Shared;
 
+var logDirectory = LogConstants.LogDirectory.ResolveOutsideProjectPath();
+
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
     .WriteTo.File(
-        path: Path.Combine(LogConstants.LogDirectory, LogConstants.LogFileName + ".txt"),
+        path: Path.Combine(logDirectory, LogConstants.LogFileName + ".txt"),
         outputTemplate: LogConstants.OutputTemplate,
         rollingInterval: RollingInterval.Day,
         retainedFileCountLimit: 7)
