@@ -1,51 +1,45 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using YoutubeTest.Consumer.Models;
 using YoutubeTest.Shared.Models;
 
 namespace YoutubeTest.Consumer.Services;
 
-public class BatchProcessor
+public class BatchProcessor(
+    YouTubeFetcher fetcher,
+    JsonOutputWriter writer,
+    ILogger<BatchProcessor> logger,
+    AppSettings settings)
 {
-    private readonly YouTubeFetcher _fetcher;
-    private readonly JsonOutputWriter _writer;
-    private readonly ILogger<BatchProcessor> _logger;
-    private readonly int _batchSize;
-
-    public BatchProcessor(YouTubeFetcher fetcher, JsonOutputWriter writer, ILogger<BatchProcessor> logger, int batchSize)
-    {
-        _fetcher = fetcher;
-        _writer = writer;
-        _logger = logger;
-        _batchSize = batchSize > 0 ? batchSize : 50;
-    }
+    private readonly int _batchSize = settings.BatchSize > 0 ? settings.BatchSize : 50;
 
     public async Task ProcessAsync(string inputPath, string outputPath, CancellationToken cancellationToken = default)
     {
         var videoIds = await LoadVideoIdsAsync(inputPath, cancellationToken);
-        _logger.LogInformation("Input: {Count} video IDs from {Path}", videoIds.Count, inputPath);
+        logger.LogInformation("Input: {Count} video IDs from {Path}", videoIds.Count, inputPath);
 
         var allVideos = new List<Video>();
         var batches = videoIds.Chunk(_batchSize).ToList();
-        _logger.LogInformation("Processing {BatchCount} batches of up to {BatchSize}", batches.Count, _batchSize);
+        logger.LogInformation("Processing {BatchCount} batches of up to {BatchSize}", batches.Count, _batchSize);
 
         for (var i = 0; i < batches.Count; i++)
         {
             var batch = batches[i];
-            _logger.LogInformation("Batch {Current}/{Total} ({Count} IDs)", i + 1, batches.Count, batch.Length);
+            logger.LogInformation("Batch {Current}/{Total} ({Count} IDs)", i + 1, batches.Count, batch.Length);
 
             try
             {
-                var videos = await _fetcher.FetchVideosAsync(batch, cancellationToken);
+                var videos = await fetcher.FetchVideosAsync(batch, cancellationToken);
                 allVideos.AddRange(videos);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Batch {Current}/{Total} failed, continuing with the next one", i + 1, batches.Count);
+                logger.LogError(ex, "Batch {Current}/{Total} failed, continuing with the next one", i + 1, batches.Count);
             }
         }
 
-        await _writer.WriteAsync(outputPath, allVideos, cancellationToken);
-        _logger.LogInformation("Process completed: {Total} final videos", allVideos.Count);
+        await writer.WriteAsync(outputPath, allVideos, cancellationToken);
+        logger.LogInformation("Process completed: {Total} final videos", allVideos.Count);
     }
 
     private static async Task<List<string>> LoadVideoIdsAsync(string inputPath, CancellationToken cancellationToken)

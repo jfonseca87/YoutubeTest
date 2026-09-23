@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
+using YoutubeTest.Consumer.Models;
 using YoutubeTest.Consumer.Services;
 
 Log.Logger = new LoggerConfiguration()
@@ -17,6 +18,8 @@ try
 
     var services = new ServiceCollection();
 
+    services.AddSingleton(settings);
+
     services.AddLogging(logging =>
     {
         logging.ClearProviders();
@@ -25,30 +28,19 @@ try
 
     services.AddHttpClient<YouTubeFetcher>((sp, client) =>
     {
-        client.BaseAddress = new Uri(settings.YouTubeBaseUrl);
+        var config = sp.GetRequiredService<AppSettings>();
+        client.BaseAddress = new Uri(config.YouTubeBaseUrl);
         client.Timeout = TimeSpan.FromSeconds(30);
         client.DefaultRequestHeaders.UserAgent.ParseAdd("YoutubeTest.Consumer/1.0");
-    }).ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+    })
+    .AddHttpMessageHandler(sp => new YouTubeAuthHandler(sp.GetRequiredService<AppSettings>().Token))
+    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
     {
         PooledConnectionLifetime = TimeSpan.FromMinutes(5)
     });
 
-    services.AddTransient(sp =>
-    {
-        var factory = sp.GetRequiredService<IHttpClientFactory>();
-        var httpClient = factory.CreateClient(nameof(YouTubeFetcher));
-        var logger = sp.GetRequiredService<ILogger<YouTubeFetcher>>();
-        return new YouTubeFetcher(httpClient, logger, settings.Token);
-    });
-
     services.AddTransient<JsonOutputWriter>();
-    services.AddTransient(sp =>
-    {
-        var fetcher = sp.GetRequiredService<YouTubeFetcher>();
-        var writer = sp.GetRequiredService<JsonOutputWriter>();
-        var logger = sp.GetRequiredService<ILogger<BatchProcessor>>();
-        return new BatchProcessor(fetcher, writer, logger, settings.BatchSize);
-    });
+    services.AddTransient<BatchProcessor>();
 
     await using var provider = services.BuildServiceProvider();
 

@@ -4,20 +4,13 @@ using YoutubeTest.Shared.Models;
 
 namespace YoutubeTest.Consumer.Services;
 
-public class JsonOutputWriter
+public class JsonOutputWriter(ILogger<JsonOutputWriter> logger)
 {
-    private readonly ILogger<JsonOutputWriter> _logger;
-
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
-
-    public JsonOutputWriter(ILogger<JsonOutputWriter> logger)
-    {
-        _logger = logger;
-    }
 
     public async Task WriteAsync(string outputPath, IReadOnlyList<Video> videos, CancellationToken cancellationToken = default)
     {
@@ -28,6 +21,6 @@ public class JsonOutputWriter
         await using var stream = File.Create(outputPath);
         await JsonSerializer.SerializeAsync(stream, videos, JsonOptions, cancellationToken);
 
-        _logger.LogInformation("Output written: {Path} ({Count} videos)", outputPath, videos.Count);
+        logger.LogInformation("Output written: {Path} ({Count} videos)", outputPath, videos.Count);
     }
 }

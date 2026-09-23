@@ -4,23 +4,12 @@ using YoutubeTest.Shared.Models;
 
 namespace YoutubeTest.Consumer.Services;
 
-public class YouTubeFetcher
+public class YouTubeFetcher(HttpClient httpClient, ILogger<YouTubeFetcher> logger)
 {
-    private readonly HttpClient _httpClient;
-    private readonly ILogger<YouTubeFetcher> _logger;
-    private readonly string _token;
-
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
-
-    public YouTubeFetcher(HttpClient httpClient, ILogger<YouTubeFetcher> logger, string token)
-    {
-        _httpClient = httpClient;
-        _logger = logger;
-        _token = token;
-    }
 
     public async Task<List<Video>> FetchVideosAsync(IReadOnlyList<string> videoIds, CancellationToken cancellationToken = default)
     {
@@ -30,11 +19,11 @@ public class YouTubeFetcher
             return results;
 
         var idParam = string.Join(",", videoIds);
-        var url = $"videos?part=snippet,contentDetails,status,statistics&id={Uri.EscapeDataString(idParam)}&key={Uri.EscapeDataString(_token)}";
+        var url = $"videos?part=snippet,contentDetails,status,statistics&id={Uri.EscapeDataString(idParam)}";
 
-        _logger.LogInformation("YouTube fetch: {Count} videos", videoIds.Count);
+        logger.LogInformation("YouTube fetch: {Count} videos", videoIds.Count);
 
-        var response = await _httpClient.GetAsync(url, cancellationToken);
+        var response = await httpClient.GetAsync(url, cancellationToken);
         response.EnsureSuccessStatusCode();
 
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -43,11 +32,11 @@ public class YouTubeFetcher
         if (result?.Items is { Count: > 0 })
         {
             results.AddRange(result.Items);
-            _logger.LogInformation("YouTube fetch OK: {Count} videos received", result.Items.Count);
+            logger.LogInformation("YouTube fetch OK: {Count} videos received", result.Items.Count);
         }
         else
         {
-            _logger.LogWarning("YouTube fetch: empty response");
+            logger.LogWarning("YouTube fetch: empty response");
         }
 
         return results;
