@@ -1,6 +1,6 @@
 using System.Net.Http.Headers;
 
-namespace YoutubeTest.Consumer.Services;
+namespace YoutubeTest.Consumer.Handlers;
 
 public class YouTubeAuthHandler(string token) : DelegatingHandler
 {
