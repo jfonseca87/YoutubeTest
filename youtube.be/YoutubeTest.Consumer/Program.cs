@@ -6,7 +6,7 @@ using YoutubeTest.Consumer.Services;
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
     .WriteTo.File(
-        path: Path.Combine("logs", "consumer-.txt"),
+        path: Path.Combine("logs", "youtubetest-.txt"),
         rollingInterval: RollingInterval.Day,
         retainedFileCountLimit: 7)
     .CreateLogger();
@@ -52,14 +52,13 @@ try
 
     await using var provider = services.BuildServiceProvider();
 
-    var batchProcessor = sp => sp.GetRequiredService<BatchProcessor>();
-    var processor = batchProcessor(provider);
+    var processor = provider.GetRequiredService<BatchProcessor>();
 
     await processor.ProcessAsync(settings.InputPath, settings.OutputPath);
 }
 catch (Exception ex)
 {
-    Log.Fatal(ex, "Consumer terminó con error");
+    Log.Fatal(ex, "Consumer terminated with an error");
     return 1;
 }
 finally

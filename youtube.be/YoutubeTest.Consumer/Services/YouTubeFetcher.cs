@@ -43,11 +43,11 @@ public class YouTubeFetcher
         if (result?.Items is { Count: > 0 })
         {
             results.AddRange(result.Items);
-            _logger.LogInformation("YouTube fetch OK: {Count} videos recibidos", result.Items.Count);
+            _logger.LogInformation("YouTube fetch OK: {Count} videos received", result.Items.Count);
         }
         else
         {
-            _logger.LogWarning("YouTube fetch: respuesta vacía");
+            _logger.LogWarning("YouTube fetch: empty response");
         }
 
         return results;

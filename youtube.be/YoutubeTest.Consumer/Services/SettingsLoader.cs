@@ -14,11 +14,11 @@ public static class SettingsLoader
         var settings = config.Get<AppSettings>() ?? new AppSettings();
 
         if (string.IsNullOrWhiteSpace(settings.Token))
-            throw new InvalidOperationException("Secret 'Token' no configurado. Ejecuta: dotnet user-secrets set \"Token\" \"<tu-token>\"");
+            throw new InvalidOperationException("Secret 'Token' is not configured. Run: dotnet user-secrets set \"Token\" \"<your-token>\"");
         if (string.IsNullOrWhiteSpace(settings.InputPath))
-            throw new InvalidOperationException("Secret 'InputPath' no configurado. Ejecuta: dotnet user-secrets set \"InputPath\" \"<ruta-json-input>\"");
+            throw new InvalidOperationException("Secret 'InputPath' is not configured. Run: dotnet user-secrets set \"InputPath\" \"<input-json-path>\"");
         if (string.IsNullOrWhiteSpace(settings.OutputPath))
-            throw new InvalidOperationException("Secret 'OutputPath' no configurado. Ejecuta: dotnet user-secrets set \"OutputPath\" \"<ruta-json-output>\"");
+            throw new InvalidOperationException("Secret 'OutputPath' is not configured. Run: dotnet user-secrets set \"OutputPath\" \"<output-json-path>\"");
 
         return settings;
     }

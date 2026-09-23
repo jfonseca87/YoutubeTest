@@ -22,16 +22,16 @@ public class BatchProcessor
     public async Task ProcessAsync(string inputPath, string outputPath, CancellationToken cancellationToken = default)
     {
         var videoIds = await LoadVideoIdsAsync(inputPath, cancellationToken);
-        _logger.LogInformation("Input: {Count} video IDs desde {Path}", videoIds.Count, inputPath);
+        _logger.LogInformation("Input: {Count} video IDs from {Path}", videoIds.Count, inputPath);
 
         var allVideos = new List<Video>();
         var batches = videoIds.Chunk(_batchSize).ToList();
-        _logger.LogInformation("Procesando {BatchCount} lotes de hasta {BatchSize}", batches.Count, _batchSize);
+        _logger.LogInformation("Processing {BatchCount} batches of up to {BatchSize}", batches.Count, _batchSize);
 
         for (var i = 0; i < batches.Count; i++)
         {
             var batch = batches[i];
-            _logger.LogInformation("Lote {Current}/{Total} ({Count} IDs)", i + 1, batches.Count, batch.Length);
+            _logger.LogInformation("Batch {Current}/{Total} ({Count} IDs)", i + 1, batches.Count, batch.Length);
 
             try
             {
@@ -40,12 +40,12 @@ public class BatchProcessor
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Fallo lote {Current}/{Total}, continúa con el siguiente", i + 1, batches.Count);
+                _logger.LogError(ex, "Batch {Current}/{Total} failed, continuing with the next one", i + 1, batches.Count);
             }
         }
 
         await _writer.WriteAsync(outputPath, allVideos, cancellationToken);
-        _logger.LogInformation("Proceso completado: {Total} videos finales", allVideos.Count);
+        _logger.LogInformation("Process completed: {Total} final videos", allVideos.Count);
     }
 
     private static async Task<List<string>> LoadVideoIdsAsync(string inputPath, CancellationToken cancellationToken)

@@ -28,6 +28,6 @@ public class JsonOutputWriter
         await using var stream = File.Create(outputPath);
         await JsonSerializer.SerializeAsync(stream, videos, JsonOptions, cancellationToken);
 
-        _logger.LogInformation("Output escrito: {Path} ({Count} videos)", outputPath, videos.Count);
+        _logger.LogInformation("Output written: {Path} ({Count} videos)", outputPath, videos.Count);
     }
 }
