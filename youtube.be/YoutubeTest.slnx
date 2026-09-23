@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="YoutubeTest.Api/YoutubeTest.Api.csproj" />
+  <Project Path="YoutubeTest.Consumer/YoutubeTest.Consumer.csproj" />
+  <Project Path="YoutubeTest.Shared/YoutubeTest.Shared.csproj" />
+</Solution>
