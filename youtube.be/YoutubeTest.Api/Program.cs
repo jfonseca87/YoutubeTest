@@ -1,41 +1,78 @@
-var builder = WebApplication.CreateBuilder(args);
+using Serilog;
+using YoutubeTest.Api.Models;
+using YoutubeTest.Api.Services;
+using YoutubeTest.Shared;
+using YoutubeTest.Shared.Extensions;
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+var logDirectory = LogConstants.LogDirectory.ResolveOutsideProjectPath();
 
-var app = builder.Build();
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .WriteTo.File(
+        path: Path.Combine(logDirectory, LogConstants.LogFileName + ".txt"),
+        outputTemplate: LogConstants.OutputTemplate,
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 7)
+    .WriteTo.Console(outputTemplate: LogConstants.OutputTemplate)
+    .CreateLogger();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+try
 {
-    app.MapOpenApi();
+    var builder = WebApplication.CreateBuilder(args);
+
+    builder.Host.UseSerilog();
+
+    builder.Services.AddOpenApi();
+    builder.Services.Configure<ApiSettings>(builder.Configuration);
+    builder.Services.AddSingleton<VideoStore>();
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("ViteDev", policy => policy
+            .WithOrigins("http://localhost:5173")
+            .AllowAnyMethod()
+            .AllowAnyHeader());
+    });
+
+    var app = builder.Build();
+
+    var videoStore = app.Services.GetRequiredService<VideoStore>();
+    videoStore.Load();
+
+    if (app.Environment.IsDevelopment())
+    {
+        app.MapOpenApi();
+    }
+
+    app.UseHttpsRedirection();
+    app.UseCors("ViteDev");
+
+    app.MapGet("/api/videos", (VideoStore store, int page = 1, int pageSize = 24) =>
+    {
+        page = Math.Max(page, 1);
+        pageSize = pageSize < 1 ? 24 : Math.Min(pageSize, 100);
+
+        var totalCount = store.Videos.Count;
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+        var items = store.Videos
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        return Results.Ok(new PagedVideosResponse(items, page, pageSize, totalCount, totalPages));
+    })
+    .WithName("GetVideos")
+    .WithTags("Videos");
+
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "API terminated with an error");
+    return 1;
+}
+finally
+{
+    Log.CloseAndFlush();
 }
 
-app.UseHttpsRedirection();
-
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
-
-app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+return 0;

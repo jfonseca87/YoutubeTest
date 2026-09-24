@@ -1,4 +1,4 @@
-namespace YoutubeTest.Consumer.Extensions;
+namespace YoutubeTest.Shared.Extensions;
 
 public static class PathExtensions
 {

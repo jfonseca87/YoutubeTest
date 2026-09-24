@@ -8,6 +8,7 @@ using YoutubeTest.Consumer.Handlers;
 using YoutubeTest.Consumer.Models;
 using YoutubeTest.Consumer.Services;
 using YoutubeTest.Shared;
+using YoutubeTest.Shared.Extensions;
 
 var logDirectory = LogConstants.LogDirectory.ResolveOutsideProjectPath();
 

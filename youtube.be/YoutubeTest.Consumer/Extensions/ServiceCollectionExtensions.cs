@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using YoutubeTest.Consumer.Models;
+using YoutubeTest.Shared.Extensions;
 
 namespace YoutubeTest.Consumer.Extensions;
 
