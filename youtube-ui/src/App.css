@@ -1,0 +1,78 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.app__header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 56px;
+  padding: 0 16px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.app__logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.app__logo-mark {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 30px;
+  height: 21px;
+  position: relative;
+  background: #ff0000;
+  border-radius: 5px;
+}
+
+.app__logo-mark::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 54%;
+  transform: translate(-50%, -50%);
+  border-style: solid;
+  border-width: 5px 0 5px 8px;
+  border-color: transparent transparent transparent #ffffff;
+}
+
+.app__logo-word {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: #0f0f0f;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app__main {
+  flex: 1;
+  padding: 24px 16px 48px;
+  background: #f9f9f9;
+}
+
+@media (max-width: 479px) {
+  .app__header {
+    padding: 0 12px;
+  }
+
+  .app__logo-word {
+    font-size: 17px;
+  }
+
+  .app__main {
+    padding: 16px 12px 40px;
+  }
+}
