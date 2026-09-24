@@ -10,12 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@primereact/ui": "^11.1.0",
-    "@primeuix/themes": "^3.0.1",
     "i18next": "^26.4.2",
     "primeflex": "^4.0.0",
-    "primeicons": "^8.0.2",
-    "primereact": "^11.1.0",
+    "primeicons": "^7.0.0",
+    "primereact": "^10.9.9",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-i18next": "^17.0.15"

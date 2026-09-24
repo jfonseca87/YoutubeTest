@@ -46,8 +46,11 @@ try
     app.UseHttpsRedirection();
     app.UseCors("ViteDev");
 
-    app.MapGet("/api/videos", (VideoStore store, int page = 1, int pageSize = 24) =>
+    app.MapGet("/api/videos", async (VideoStore store, int page = 1, int pageSize = 24) =>
     {
+        int randomDelay = new Random().Next(0, 1500);
+        await Task.Delay(randomDelay);
+
         page = Math.Max(page, 1);
         pageSize = pageSize < 1 ? 24 : Math.Min(pageSize, 100);
 

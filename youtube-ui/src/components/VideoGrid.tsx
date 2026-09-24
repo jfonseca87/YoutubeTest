@@ -1,15 +1,15 @@
-import { Button } from '@primereact/ui/button';
-import { ProgressSpinnerRoot } from '@primereact/ui/progressspinner';
-import { useTranslation } from 'react-i18next';
-import { useInfiniteVideos } from '../hooks/useInfiniteVideos';
-import type { Video } from '../types/video';
-import VideoCard from './VideoCard';
-import './VideoGrid.css';
+import { Button } from "primereact/button";
+import { ProgressSpinner } from "primereact/progressspinner";
+import { useTranslation } from "react-i18next";
+import { useInfiniteVideos } from "../hooks/useInfiniteVideos";
+import type { Video } from "../types/video";
+import VideoCard from "./VideoCard";
+import "./VideoGrid.css";
 
 function videoKey(video: Video, index: number): string {
   const { id } = video;
-  if (typeof id === 'string' && id) return id;
-  if (id && typeof id === 'object' && id.videoId) return id.videoId;
+  if (typeof id === "string" && id) return id;
+  if (id && typeof id === "object" && id.videoId) return id.videoId;
   return `video-${index}`;
 }
 
@@ -23,18 +23,18 @@ export default function VideoGrid() {
       <div
         className="video-grid__panel"
         role="status"
-        aria-label={t('status.loading')}
+        aria-label={t("status.loading")}
       >
-        <ProgressSpinnerRoot />
+        <ProgressSpinner />
       </div>
     );
   }
 
-  if (error === 'initial') {
+  if (error === "initial") {
     return (
       <div className="video-grid__panel" role="alert">
-        <p className="video-grid__message">{t('status.error')}</p>
-        <Button label={t('status.retry')} onClick={retry} />
+        <p className="video-grid__message">{t("status.error")}</p>
+        <Button label={t("status.retry")} onClick={retry} />
       </div>
     );
   }
@@ -42,7 +42,7 @@ export default function VideoGrid() {
   if (items.length === 0) {
     return (
       <div className="video-grid__panel">
-        <p className="video-grid__message">{t('status.empty')}</p>
+        <p className="video-grid__message">{t("status.empty")}</p>
       </div>
     );
   }
@@ -57,19 +57,19 @@ export default function VideoGrid() {
           <div
             className="video-grid__inline-status"
             role="status"
-            aria-label={t('status.loadingMore')}
+            aria-label={t("status.loadingMore")}
           >
-            <ProgressSpinnerRoot />
+            <ProgressSpinner />
           </div>
         )}
-        {!loadingMore && error === 'more' && (
+        {!loadingMore && error === "more" && (
           <div className="video-grid__inline-error" role="alert">
-            <span className="video-grid__message">{t('status.error')}</span>
-            <Button label={t('status.retry')} onClick={retry} />
+            <span className="video-grid__message">{t("status.error")}</span>
+            <Button label={t("status.retry")} onClick={retry} />
           </div>
         )}
         {!loadingMore && !error && !hasMore && (
-          <p className="video-grid__end">{t('status.endOfList')}</p>
+          <p className="video-grid__end">{t("status.endOfList")}</p>
         )}
       </div>
       <div
